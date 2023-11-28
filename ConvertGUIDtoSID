@@ -1,0 +1,90 @@
+#region Function declaration
+Function ConvertFrom-GraphObjectId {
+    <#
+        .SYNOPSIS
+        Converts a Entra Id ObjectId to a SID
+
+        .DESCRIPTION
+        Converts a Entra Id ObjectId to a SID
+
+        .PARAMETER ObjectId
+        The ObjectId to convert
+
+        .EXAMPLE
+        ConvertFrom-GraphObjectId -ObjectId 1d4c5c6d-5b7a-4e8f-9d1a-2b1a3b4c5d6e
+
+        .EXAMPLE
+        Get-MgDirectoryRole -Filter "DisplayName eq 'Global Administrator'" | ConvertFrom-GraphObjectId
+
+        .EXAMPLE
+        (Get-Mggroup -Top 2) | ConvertFrom-GraphObjectId
+
+        .INPUTS
+        System.String
+
+        .OUTPUTS
+        System.Collections.ArrayList
+
+        .NOTES
+        Author: Gabriel Delaney
+        Date: 11/28/2023
+        Version: 1.0
+        Name: ConvertFrom-GraphObjectId
+
+        Version History:
+        0.0.1 - Alpha release - 11/28/2023 - Gabriel Delaney
+    
+    #>
+    [CmdletBinding()]
+    [OutputType([System.Collections.ArrayList])]
+    param (
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
+        [alias("Id")]
+        [guid[]]$ObjectId
+    
+    )
+    Begin {
+        $output_obj = [system.collections.arraylist]::new()
+
+    } Process {
+        Foreach ($id in $objectId) {
+            # Parse the ObjectId to a byte array
+            $bytes = [Guid]::Parse($objectId).ToByteArray()
+
+            # Create a new UInt32 array
+            $array = New-Object 'UInt32[]' 4
+        
+            # Copy the bytes to the array
+            [Buffer]::BlockCopy($bytes, 0, $array, 0, 16)
+
+            # Convert the array to a SID
+            $sid = "S-1-12-1-$array".Replace(' ', '-')
+
+            # Create a new object to output
+            $obj = @{}
+            $obj["ObjectId"] = $id
+            $obj["SID"] = $sid
+
+            # Add the object to the output array
+            [void]$output_obj.Add([PSCustomObject]$obj)
+
+        }
+    } End {
+        # Output the array
+        $output_obj
+
+    }
+
+}
+
+#endregion
+
+#region Connect-AzureAD
+
+Import-Module AzureAD -UseWindowsPowershell
+Connect-AzureAD
+
+#endregion
+
+# region Main
+Get-AzureADDirectoryRole | ConvertFrom-GraphObjectId | Export-csv C:\VMDIT\AzureADRolesWithSID.csv
