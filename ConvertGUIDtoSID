@@ -87,4 +87,12 @@ Connect-AzureAD
 #endregion
 
 # region Main
-Get-AzureADDirectoryRole | ConvertFrom-GraphObjectId | Export-csv C:\VMDIT\AzureADRolesWithSID.csv
+$directory_roles = Get-AzureADDirectoryRole
+Foreach ($role in $directory_roles) {
+    $obj = @{}
+    $obj["DisplayName"] = $role.DisplayName
+    $obj["ObjectId"] = $role.ObjectId 
+    $obj["SID"] = ($role | ConvertFrom-GraphObjectId).Sid
+    [pscustomobject]$obj | Export-csv C:\filehere.csv -Append -NoTypeInformation
+
+}
