@@ -1,0 +1,32 @@
+# Specify your Microsoft 365 tenant credentials
+$TenantId = "your-tenant-id"
+$ClientId = "your-client-id"
+$ClientSecret = "your-client-secret"
+
+# Connect to the Microsoft Graph using the specified credentials
+Connect-MgGraph -ClientId $ClientId -ClientSecret $ClientSecret -TenantId $TenantId
+
+# Retrieve all service principals
+$AllServicePrincipals = Get-MgServicePrincipal -All
+
+$Report = foreach ($Principal in $AllServicePrincipals) {
+    foreach ($Credential in $Principal.PasswordCredentials) {
+        [pscustomobject]@{
+            DisplayName    = $Principal.DisplayName
+            Id             = $Principal.Id
+            AppId          = $Principal.AppId            
+            EndDateTime    = $Credential.EndDateTime
+            PwdDisplayName = $Credential.DisplayName
+            KeyId          = $Credential.KeyId
+        }
+    }
+}
+
+# Export the data to a CSV file
+$Report | Export-Csv -Path 'C:\yourtenanthere' -NoTypeInformation
+
+# Display the data (optional)
+$Report | Format-Table
+
+# Disconnect from the Microsoft Graph
+Disconnect-MgGraph
