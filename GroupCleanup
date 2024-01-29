@@ -1,26 +1,38 @@
-# Install and import the AzureAD module if not already installed
-if (-not (Get-Module -Name AzureAD -ListAvailable)) {
-    Install-Module AzureAD -Force -Scope CurrentUser
-}
-
+Install-Module AzureAD
 Import-Module AzureAD
+Import-Module AzureAD -UseWindowsPowershell
+Connect-AzureAD
+
 
 # Connect to Azure AD
 Connect-AzureAD
 
-# Search for Azure AD groups with "iOS" in their name and 0 members
-$groups = Get-AzureADGroup -Filter "displayName eq 'iOS*' and membersCount eq 0"
+# Search for Azure AD groups with "iOS" in their name
+$groups = Get-AzureADGroup -All $true | Where-Object { $_.DisplayName -like '*iOS*' }
 
 # Define the CSV file path
-$csvFilePath = "C:\yourpathhere\AzureADGroups.csv"
+$csvFilePath = "C:\VMDIT\AzureADGroups.csv"
 
-# Export the matching groups to a CSV file
+# Create an array to store the results
+$results = @()
+
+# Display the matching groups and their member counts
 if ($groups.Count -gt 0) {
-    Write-Host "Exporting Azure AD groups with 'iOS' in their name and 0 members to $csvFilePath"
-    $groups | Select-Object DisplayName, ObjectId | Export-Csv -Path $csvFilePath -NoTypeInformation
-} else {
-    Write-Host "No Azure AD groups found with 'iOS' in their name and 0 members."
-}
+    Write-Host "Azure AD groups with 'iOS' in their name and their member counts:"
+    foreach ($group in $groups) {
+        $members = Get-AzureADGroupMember -ObjectId $group.ObjectId -All $true
+        $memberCount = $members.Count
+        $result = [PSCustomObject]@{
+            GroupName = $group.DisplayName
+            MemberCount = $memberCount
+        }
+        $results += $result
+        Write-Host "$($group.DisplayName): $memberCount members"
+    }
 
-# Disconnect from Azure AD
-Disconnect-AzureAD
+    # Export the results to a CSV file
+    $results | Export-Csv -Path $csvFilePath -NoTypeInformation
+    Write-Host "Results exported to $csvFilePath"
+} else {
+    Write-Host "No Azure AD groups found with 'iOS' in their name."
+}
