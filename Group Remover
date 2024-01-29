@@ -1,0 +1,26 @@
+Install-Module AzureAD
+Import-Module AzureAD
+Import-Module AzureAD -UseWindowsPowershell
+Connect-AzureAD
+
+
+# Search for Azure AD groups with "iOS" in their name
+$groups = Get-AzureADGroup -All $true | Where-Object { $_.DisplayName -like '*iOS*' }
+
+# Display the matching groups and their member counts
+if ($groups.Count -gt 0) {
+    Write-Host "Azure AD groups with 'iOS' in their name and their member counts:"
+    foreach ($group in $groups) {
+        $members = Get-AzureADGroupMember -ObjectId $group.ObjectId -All $true
+        $memberCount = $members.Count
+        Write-Host "$($group.DisplayName): $memberCount members"
+
+        # Check if the group has 0 members and delete it if necessary
+        if ($memberCount -eq 0) {
+            Write-Host "Deleting $($group.DisplayName) as it has 0 members..."
+            Remove-AzureADGroup -ObjectId $group.ObjectId -Force
+        }
+    }
+} else {
+    Write-Host "No Azure AD groups found with 'iOS' in their name."
+}
